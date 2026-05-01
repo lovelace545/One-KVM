@@ -16,12 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive  # 必须拉取子模块
+      
+      - name: Pull Git Submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive --force
 
-      # 显式初始化并更新子模块（双重保险）
-      - name: Update submodules
-        run: git submodule update --init --recursive
+      # 2. 诊断确认（可选，跑通后可删掉）
+      - name: Check files
+        run: ls -la res/vcpkg/
 
       - name: Install dependencies
         run: |
