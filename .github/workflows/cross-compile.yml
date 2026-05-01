@@ -1,0 +1,77 @@
+name: Cross-Compile Build
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'build/**'
+      - '.github/workflows/cross-compile.yml'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'build/**'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-arm64:
+    name: Build ARM64 (aarch64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+      
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: aarch64-unknown-linux-gnu
+      
+      - name: Install cross
+        run: cargo install cross
+      
+      - name: Build ARM64
+        run: cross build --release --target aarch64-unknown-linux-gnu
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-kvm-aarch64
+          path: target/aarch64-unknown-linux-gnu/release/one-kvm
+          retention-days: 5
+
+  build-armv7:
+    name: Build ARMv7 (armv7)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-unknown-linux-gnueabihf
+      
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: armv7-unknown-linux-gnueabihf
+      
+      - name: Install cross
+        run: cargo install cross
+      
+      - name: Build ARMv7
+        run: cross build --release --target armv7-unknown-linux-gnueabihf
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-kvm-armv7
+          path: target/armv7-unknown-linux-gnueabihf/release/one-kvm
+          retention-days: 5
