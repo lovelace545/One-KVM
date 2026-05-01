@@ -17,6 +17,7 @@ use crate::auth::auth_middleware;
 use crate::hid::websocket::ws_hid_handler;
 use crate::state::AppState;
 
+/// Create the main application router
 pub fn create_router(state: Arc<AppState>) -> Router {
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -65,6 +66,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/hid/status", get(handlers::hid_status))
         .route("/hid/otg/self-check", get(handlers::hid_otg_self_check))
         .route("/hid/reset", post(handlers::hid_reset))
+        .route("/hid/channel", post(handlers::hid_channel_switch))
         // WebSocket HID endpoint (for MJPEG mode)
         .route("/ws/hid", any(ws_hid_handler))
         // Audio endpoints
@@ -176,11 +178,6 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/atx/wol/history", get(handlers::atx_wol_history))
         // Device discovery endpoints
         .route("/devices/atx", get(handlers::devices::list_atx_devices))
-        .route("/devices/usb", get(handlers::devices::list_usb_devices))
-        .route(
-            "/devices/usb/reset",
-            post(handlers::devices::reset_usb_device),
-        )
         // Extension management endpoints
         .route("/extensions", get(handlers::extensions::list_extensions))
         .route("/extensions/{id}", get(handlers::extensions::get_extension))
