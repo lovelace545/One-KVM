@@ -22,9 +22,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       
       - name: Install system dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libudev-dev libssl-dev pkg-config libasound2-dev
+          sudo apt-get install -y \
+            libudev-dev \
+            libssl-dev \
+            pkg-config \
+            libasound2-dev \
+            nasm \
+            cmake
 
       - name: Check code
         run: cargo check --all-features
