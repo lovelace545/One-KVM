@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useSystemStore } from '@/stores/system'
@@ -39,20 +39,25 @@ import {
   BarChart3,
   Terminal,
   MoreHorizontal,
+  Repeat,
 } from 'lucide-vue-next'
 import PasteModal from '@/components/PasteModal.vue'
 import AtxPopover from '@/components/AtxPopover.vue'
 import VideoConfigPopover, { type VideoMode } from '@/components/VideoConfigPopover.vue'
 import HidConfigPopover from '@/components/HidConfigPopover.vue'
 import AudioConfigPopover from '@/components/AudioConfigPopover.vue'
+import { hidApi } from '@/api'
+import { toast } from 'vue-sonner'
 import MsdDialog from '@/components/MsdDialog.vue'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const router = useRouter()
 const systemStore = useSystemStore()
 
+// Overflow menu state
 const overflowMenuOpen = ref(false)
 
+// MSD is only available when HID backend is not CH9329 (CH9329 is serial-only, no USB gadget)
 const hidBackend = computed(() => (systemStore.hid?.backend ?? '').toLowerCase())
 const isCh9329Backend = computed(() => hidBackend.value.includes('ch9329'))
 const showMsd = computed(() => {
@@ -78,7 +83,9 @@ const emit = defineEmits<{
   (e: 'openTerminal'): void
 }>()
 
+// Desktop toolbar popover/dialog state
 const pasteOpen = ref(false)
+const channelOpen = ref(false)
 const atxOpen = ref(false)
 const videoPopoverOpen = ref(false)
 const hidPopoverOpen = ref(false)
@@ -86,8 +93,16 @@ const audioPopoverOpen = ref(false)
 const msdDialogOpen = ref(false)
 const extensionOpen = ref(false)
 
+// Mobile Sheet state — opened from the overflow menu.
+// We use Sheet (bottom drawer) instead of Popover because Popover relies on an
+// anchor element that is hidden / clipped on small screens, causing it to
+// immediately close after opening.
 const mobileAtxOpen = ref(false)
 const mobilePasteOpen = ref(false)
+
+// Timestamps used to suppress spurious "interact-outside" events that arrive
+// within ~300 ms of the Sheet opening (e.g. delayed synthetic pointer events
+// from the same touch gesture that opened the overflow menu).
 const mobileAtxOpenTime = ref(0)
 const mobilePasteOpenTime = ref(0)
 
@@ -99,6 +114,9 @@ const guardOutside = (openTime: number, e: Event) => {
   }
 }
 
+// On mobile, clicking a DropdownMenuItem generates pointer events that can
+// immediately dismiss any overlay opened in the same tick. Close the dropdown
+// first, then open the target after a short delay.
 const openFromOverflow = (setter: () => void) => {
   overflowMenuOpen.value = false
   setTimeout(setter, 50)
@@ -114,140 +132,24 @@ const openMobilePaste = () => openFromOverflow(() => {
   mobilePasteOpenTime.value = Date.now()
 })
 
+const switchChannel = async (channel: '1' | '2' | '3' | '4') => {
+  channelOpen.value = false
 
-const barRef = ref<HTMLElement | null>(null)
-const measureRef = ref<HTMLElement | null>(null)
-const barWidth = ref(0)
-let resizeObserver: ResizeObserver | null = null
-
-type CollapsibleItem =
-  | 'video' | 'audio' | 'hid'
-  | 'msd' | 'atx' | 'paste'
-  | 'stats' | 'extension' | 'settings'
-
-interface ItemSpec {
-  id: CollapsibleItem
-  side: 'left' | 'right'
+  try {
+    await hidApi.channel(channel)
+    toast.success(t('actionbar.channelSwitched', { channel }))
+  } catch (error) {
+    console.error('[ActionBar] Channel switch failed', error)
+    toast.error(t('actionbar.channelSwitchFailed'))
+  }
 }
-
-const ITEM_SPECS: ItemSpec[] = [
-  { id: 'video',     side: 'left' },
-  { id: 'audio',     side: 'left' },
-  { id: 'hid',       side: 'left' },
-  { id: 'msd',       side: 'left' },
-  { id: 'atx',       side: 'left' },
-  { id: 'paste',     side: 'left' },
-  { id: 'stats',     side: 'right' },
-  { id: 'extension', side: 'right' },
-  { id: 'settings',  side: 'right' },
-]
-
-const measuredWidths = ref<Map<CollapsibleItem, { icon: number; label: number }>>(new Map())
-const measurementReady = ref(false)
-
-const measureButtonWidths = async () => {
-  await nextTick()
-  if (!measureRef.value) return
-
-  const newWidths = new Map<CollapsibleItem, { icon: number; label: number }>()
-  
-  for (const spec of ITEM_SPECS) {
-    const iconEl = measureRef.value.querySelector(`[data-measure="${spec.id}-icon"]`) as HTMLElement
-    const labelEl = measureRef.value.querySelector(`[data-measure="${spec.id}-label"]`) as HTMLElement
-    
-    if (iconEl && labelEl) {
-      newWidths.set(spec.id, {
-        icon: Math.ceil(iconEl.offsetWidth) + 8,
-        label: Math.ceil(labelEl.offsetWidth) + 8,
-      })
-    }
-  }
-  
-  measuredWidths.value = newWidths
-  measurementReady.value = true
-}
-
-onMounted(() => {
-  if (barRef.value) {
-    resizeObserver = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (entry) barWidth.value = entry.contentRect.width
-    })
-    resizeObserver.observe(barRef.value)
-    barWidth.value = barRef.value.clientWidth
-  }
-  
-  measureButtonWidths()
-})
-
-onUnmounted(() => { 
-  resizeObserver?.disconnect() 
-})
-
-watch(locale, () => {
-  measurementReady.value = false
-  measureButtonWidths()
-})
-
-const RIGHT_FIXED_PX = 120
-
-const collapsibleItems = computed(() => {
-  const items = ITEM_SPECS.slice(3).filter(item => {
-    if (item.id === 'msd' && !showMsd.value) return false
-    return true
-  })
-  return items
-})
-
-const visibleSet = computed(() => {
-  if (!measurementReady.value) {
-    return new Map<CollapsibleItem, 'icon' | 'label'>()
-  }
-
-  const available = barWidth.value - RIGHT_FIXED_PX
-  
-  let used = 0
-  if (barRef.value) {
-    const leftContainer = barRef.value.querySelector('.left-buttons') as HTMLElement
-    if (leftContainer) {
-      const children = Array.from(leftContainer.children).slice(0, 3) as HTMLElement[]
-      used = children.reduce((sum, el) => sum + el.offsetWidth, 0)
-    }
-  }
-  
-  if (used === 0) used = 330
-  
-  const result = new Map<CollapsibleItem, 'icon' | 'label'>()
-
-  for (const item of collapsibleItems.value) {
-    const widths = measuredWidths.value.get(item.id)
-    if (!widths) continue
-    
-    if (used + widths.icon <= available) {
-      if (used + widths.label <= available) {
-        result.set(item.id, 'label')
-        used += widths.label
-      } else {
-        result.set(item.id, 'icon')
-        used += widths.icon
-      }
-    }
-  }
-  
-  return result
-})
-
-const isVisible = (id: CollapsibleItem) => visibleSet.value.has(id)
-const hasOverflow = computed(() => {
-  return collapsibleItems.value.some(i => !visibleSet.value.has(i.id))
-})
 </script>
 
 <template>
   <div class="w-full border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-    <div ref="barRef" class="flex items-center px-2 sm:px-4 py-1 sm:py-1.5">
-      <!-- Left side buttons -->
-      <div class="left-buttons flex items-center gap-0.5 sm:gap-1.5 flex-1 min-w-0 overflow-hidden">
+    <div class="flex items-center px-2 sm:px-4 py-1 sm:py-1.5">
+      <!-- Left side buttons — overflow hidden so it never pushes into right side -->
+      <div class="flex items-center gap-0.5 sm:gap-1.5 flex-1 min-w-0 overflow-hidden">
         <!-- Video Config - Always visible -->
         <VideoConfigPopover
           v-model:open="videoPopoverOpen"
@@ -255,7 +157,7 @@ const hasOverflow = computed(() => {
           @update:video-mode="emit('update:videoMode', $event)"
         />
 
-        <!-- Audio Config - Always visible -->
+        <!-- Audio Config - Always visible (xs shows icon only) -->
         <AudioConfigPopover v-model:open="audioPopoverOpen" />
 
         <!-- HID Config - Always visible -->
@@ -265,14 +167,14 @@ const hasOverflow = computed(() => {
           @update:mouse-mode="emit('toggleMouseMode')"
         />
 
-        <!-- Virtual Media (MSD) - Adaptive -->
-        <div v-if="showMsd && isVisible('msd')">
+        <!-- Virtual Media (MSD) - Hidden below md, shown in overflow -->
+        <div v-if="showMsd" class="hidden md:block">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
                 <Button variant="ghost" size="sm" class="h-8 gap-1.5 text-xs" @click="msdDialogOpen = true">
                   <HardDrive class="h-4 w-4" />
-                  <span v-if="visibleSet.get('msd') === 'label'">{{ t('actionbar.virtualMedia') }}</span>
+                  <span class="hidden lg:inline">{{ t('actionbar.virtualMedia') }}</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -282,13 +184,13 @@ const hasOverflow = computed(() => {
           </TooltipProvider>
         </div>
 
-        <!-- ATX Power Control - Adaptive -->
-        <div v-if="isVisible('atx')">
+        <!-- ATX Power Control - Hidden below md; shown as Sheet on mobile -->
+        <div class="hidden md:block">
           <Popover v-model:open="atxOpen">
             <PopoverTrigger as-child>
               <Button variant="ghost" size="sm" class="h-8 gap-1.5 text-xs">
                 <Power class="h-4 w-4" />
-                <span v-if="visibleSet.get('atx') === 'label'">{{ t('actionbar.power') }}</span>
+                <span class="hidden lg:inline">{{ t('actionbar.power') }}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent class="w-[min(280px,90vw)] p-0" align="start">
@@ -303,13 +205,13 @@ const hasOverflow = computed(() => {
           </Popover>
         </div>
 
-        <!-- Paste Text - Adaptive -->
-        <div v-if="isVisible('paste')">
+        <!-- Paste Text - Hidden below lg; shown as Sheet on mobile -->
+        <div class="hidden lg:block">
           <Popover v-model:open="pasteOpen">
             <PopoverTrigger as-child>
               <Button variant="ghost" size="sm" class="h-8 gap-1.5 text-xs">
                 <ClipboardPaste class="h-4 w-4" />
-                <span v-if="visibleSet.get('paste') === 'label'">{{ t('actionbar.paste') }}</span>
+                <span class="hidden xl:inline">{{ t('actionbar.paste') }}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent class="w-[min(400px,90vw)] p-0" align="start">
@@ -317,34 +219,34 @@ const hasOverflow = computed(() => {
             </PopoverContent>
           </Popover>
         </div>
-      </div>
 
-      <!-- Right side buttons -->
-      <div class="flex items-center gap-0.5 sm:gap-1.5 shrink-0 ml-1 sm:ml-2">
-        <!-- Connection Stats - Adaptive -->
-        <div v-if="isVisible('stats')">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button variant="ghost" size="sm" class="h-8 gap-1.5 text-xs" @click="emit('toggleStats')">
-                  <BarChart3 class="h-4 w-4" />
-                  <span v-if="visibleSet.get('stats') === 'label'">{{ t('actionbar.stats') }}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{{ t('actionbar.statsTip') }}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <!-- Channel switch - Hidden below lg; shown as Sheet on mobile -->
+        <div class="hidden lg:block">
+          <Popover v-model:open="channelOpen">
+            <PopoverTrigger as-child>
+              <Button variant="ghost" size="sm" class="h-8 gap-1.5 text-xs">
+                <Repeat class="h-4 w-4" />
+                <span class="hidden xl:inline">{{ t('actionbar.channel') }}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent class="w-[min(220px,90vw)] p-2" align="start">
+              <div class="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" class="h-9" @click="switchChannel('1')">{{ t('actionbar.channel1') }}</Button>
+                <Button variant="outline" size="sm" class="h-9" @click="switchChannel('2')">{{ t('actionbar.channel2') }}</Button>
+                <Button variant="outline" size="sm" class="h-9" @click="switchChannel('3')">{{ t('actionbar.channel3') }}</Button>
+                <Button variant="outline" size="sm" class="h-9" @click="switchChannel('4')">{{ t('actionbar.channel4') }}</Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
-
-        <!-- Extension Menu - Adaptive -->
-        <div v-if="isVisible('extension')">
+      <div class="flex items-center gap-0.5 sm:gap-1.5 shrink-0 ml-1 sm:ml-2">
+        <!-- Extension Menu - Hidden below xl -->
+        <div class="hidden xl:block">
           <Popover v-model:open="extensionOpen">
             <PopoverTrigger as-child>
               <Button variant="ghost" size="sm" class="h-8 gap-1.5 text-xs">
                 <Cable class="h-4 w-4" />
-                <span v-if="visibleSet.get('extension') === 'label'">{{ t('actionbar.extension') }}</span>
+                {{ t('actionbar.extension') }}
               </Button>
             </PopoverTrigger>
             <PopoverContent class="w-48 p-1" align="start">
@@ -364,14 +266,14 @@ const hasOverflow = computed(() => {
           </Popover>
         </div>
 
-        <!-- Settings - Adaptive -->
-        <div v-if="isVisible('settings')">
+        <!-- Settings - Hidden below xl -->
+        <div class="hidden xl:block">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
                 <Button variant="ghost" size="sm" class="h-8 gap-1.5 text-xs" @click="router.push('/settings')">
                   <Settings class="h-4 w-4" />
-                  <span v-if="visibleSet.get('settings') === 'label'">{{ t('actionbar.settings') }}</span>
+                  {{ t('actionbar.settings') }}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -381,9 +283,26 @@ const hasOverflow = computed(() => {
           </TooltipProvider>
         </div>
 
-        <div v-if="isVisible('stats') || isVisible('extension') || isVisible('settings')" class="h-5 w-px bg-slate-200 dark:bg-slate-700" />
+        <!-- Connection Stats - Hidden below md -->
+        <div class="hidden md:block">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button variant="ghost" size="sm" class="h-8 gap-1.5 text-xs" @click="emit('toggleStats')">
+                  <BarChart3 class="h-4 w-4" />
+                  <span class="hidden xl:inline">{{ t('actionbar.stats') }}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{{ t('actionbar.statsTip') }}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
 
-        <!-- Virtual Keyboard - Always visible -->
+        <div class="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden md:block" />
+
+        <!-- Virtual Keyboard - Always visible (important for mobile) -->
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger as-child>
@@ -423,43 +342,59 @@ const hasOverflow = computed(() => {
           </Tooltip>
         </TooltipProvider>
 
-        <!-- Overflow Menu - Only show if there are overflowed items -->
-        <DropdownMenu v-if="hasOverflow" v-model:open="overflowMenuOpen">
+        <!-- Overflow Menu - Shows hidden items on smaller screens -->
+        <DropdownMenu v-model:open="overflowMenuOpen">
           <DropdownMenuTrigger as-child>
-            <Button variant="ghost" size="sm" class="h-7 w-7 sm:h-8 sm:w-8 p-0">
+            <Button variant="ghost" size="sm" class="h-7 w-7 sm:h-8 sm:w-8 p-0 xl:hidden">
               <MoreHorizontal class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" class="w-48">
-            <!-- MSD -->
-            <DropdownMenuItem v-if="showMsd && !isVisible('msd')" @click="openFromOverflow(() => msdDialogOpen = true)">
+            <!-- MSD - Below md, hidden when CH9329 backend -->
+            <DropdownMenuItem v-if="showMsd" class="md:hidden" @click="openFromOverflow(() => msdDialogOpen = true)">
               <HardDrive class="h-4 w-4 mr-2" />
               {{ t('actionbar.virtualMedia') }}
             </DropdownMenuItem>
 
-            <!-- ATX -->
-            <DropdownMenuItem v-if="!isVisible('atx')" @click="openMobileAtx">
+            <!-- ATX - Opens a Sheet on mobile (below md) -->
+            <DropdownMenuItem class="md:hidden" @click="openMobileAtx">
               <Power class="h-4 w-4 mr-2" />
               {{ t('actionbar.power') }}
             </DropdownMenuItem>
 
-            <!-- Paste -->
-            <DropdownMenuItem v-if="!isVisible('paste')" @click="openMobilePaste">
+            <!-- Paste - Opens a Sheet on mobile (below lg) -->
+            <DropdownMenuItem class="lg:hidden" @click="openMobilePaste">
               <ClipboardPaste class="h-4 w-4 mr-2" />
               {{ t('actionbar.paste') }}
             </DropdownMenuItem>
+            <DropdownMenuSeparator class="lg:hidden" />
+            <DropdownMenuItem class="lg:hidden" @click="switchChannel('1')">
+              <Repeat class="h-4 w-4 mr-2" />
+              {{ t('actionbar.channel1') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem class="lg:hidden" @click="switchChannel('2')">
+              <Repeat class="h-4 w-4 mr-2" />
+              {{ t('actionbar.channel2') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem class="lg:hidden" @click="switchChannel('3')">
+              <Repeat class="h-4 w-4 mr-2" />
+              {{ t('actionbar.channel3') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem class="lg:hidden" @click="switchChannel('4')">
+              <Repeat class="h-4 w-4 mr-2" />
+              {{ t('actionbar.channel4') }}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
 
-            <DropdownMenuSeparator v-if="(!isVisible('msd') || !isVisible('atx') || !isVisible('paste')) && (!isVisible('stats') || !isVisible('extension') || !isVisible('settings'))" />
-
-            <!-- Stats -->
-            <DropdownMenuItem v-if="!isVisible('stats')" @click="openFromOverflow(() => emit('toggleStats'))">
+            <!-- Stats - Below md -->
+            <DropdownMenuItem class="md:hidden" @click="openFromOverflow(() => emit('toggleStats'))">
               <BarChart3 class="h-4 w-4 mr-2" />
               {{ t('actionbar.stats') }}
             </DropdownMenuItem>
 
-            <!-- Extension -->
+            <!-- Extension - Below xl -->
             <DropdownMenuItem
-              v-if="!isVisible('extension')"
+              class="xl:hidden"
               :disabled="!props.ttydRunning"
               @click="openFromOverflow(() => emit('openTerminal'))"
             >
@@ -467,8 +402,8 @@ const hasOverflow = computed(() => {
               {{ t('extensions.ttyd.title') }}
             </DropdownMenuItem>
 
-            <!-- Settings -->
-            <DropdownMenuItem v-if="!isVisible('settings')" @click="openFromOverflow(() => router.push('/settings'))">
+            <!-- Settings - Below xl -->
+            <DropdownMenuItem class="xl:hidden" @click="openFromOverflow(() => router.push('/settings'))">
               <Settings class="h-4 w-4 mr-2" />
               {{ t('actionbar.settings') }}
             </DropdownMenuItem>
@@ -517,36 +452,4 @@ const hasOverflow = computed(() => {
       <PasteModal @close="mobilePasteOpen = false" />
     </SheetContent>
   </Sheet>
-
-  <!-- Hidden measurement container: renders each collapsible button in both
-       icon-only and with-label forms so we can read their real offsetWidth. -->
-  <div ref="measureRef" aria-hidden="true" class="fixed pointer-events-none" style="visibility: hidden; top: -9999px; left: -9999px; white-space: nowrap;">
-    <div class="flex items-center gap-0.5 sm:gap-1.5 px-2 sm:px-4 py-1 sm:py-1.5">
-      <!-- MSD -->
-      <Button data-measure="msd-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><HardDrive class="h-4 w-4" /></Button>
-      <Button data-measure="msd-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><HardDrive class="h-4 w-4" />{{ t('actionbar.virtualMedia') }}</Button>
-      <!-- ATX -->
-      <Button data-measure="atx-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Power class="h-4 w-4" /></Button>
-      <Button data-measure="atx-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Power class="h-4 w-4" />{{ t('actionbar.power') }}</Button>
-      <!-- Paste -->
-      <Button data-measure="paste-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><ClipboardPaste class="h-4 w-4" /></Button>
-      <Button data-measure="paste-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><ClipboardPaste class="h-4 w-4" />{{ t('actionbar.paste') }}</Button>
-      <!-- Stats -->
-      <Button data-measure="stats-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><BarChart3 class="h-4 w-4" /></Button>
-      <Button data-measure="stats-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><BarChart3 class="h-4 w-4" />{{ t('actionbar.stats') }}</Button>
-      <!-- Extension -->
-      <Button data-measure="extension-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Cable class="h-4 w-4" /></Button>
-      <Button data-measure="extension-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Cable class="h-4 w-4" />{{ t('actionbar.extension') }}</Button>
-      <!-- Settings -->
-      <Button data-measure="settings-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Settings class="h-4 w-4" /></Button>
-      <Button data-measure="settings-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Settings class="h-4 w-4" />{{ t('actionbar.settings') }}</Button>
-      <!-- Always-visible items (for measuring their actual width) -->
-      <Button data-measure="video-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><HardDrive class="h-4 w-4" /></Button>
-      <Button data-measure="video-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><HardDrive class="h-4 w-4" /></Button>
-      <Button data-measure="audio-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><HardDrive class="h-4 w-4" /></Button>
-      <Button data-measure="audio-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><HardDrive class="h-4 w-4" /></Button>
-      <Button data-measure="hid-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><HardDrive class="h-4 w-4" /></Button>
-      <Button data-measure="hid-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><HardDrive class="h-4 w-4" /></Button>
-    </div>
-  </div>
 </template>
