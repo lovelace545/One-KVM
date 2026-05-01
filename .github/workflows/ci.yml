@@ -17,14 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Pull Git Submodules
+      - name: Get vcpkg
         run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive --force
-
-      # 2. 诊断确认（可选，跑通后可删掉）
-      - name: Check files
-        run: ls -la res/vcpkg/
+          mkdir -p res
+          git clone --depth=1 https://github.com/microsoft/vcpkg.git res/vcpkg
+          # 国内如果 GitHub 慢，可以用下面这行 Gitee 镜像
+          # git clone --depth=1 https://gitee.com/mirrors/vcpkg.git res/vcpkg
 
       - name: Install dependencies
         run: |
@@ -36,7 +34,7 @@ jobs:
           cd res/vcpkg
           chmod +x bootstrap-vcpkg.sh
           ./bootstrap-vcpkg.sh
-          ./vcpkg integrate install
+          ./vcpkg integrate instal
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
