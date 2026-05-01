@@ -92,6 +92,13 @@ export default {
   },
   actionbar: {
     paste: '粘贴文本',
+    channel: '通道切换',
+    channel1: '通道 1',
+    channel2: '通道 2',
+    channel3: '通道 3',
+    channel4: '通道 4',
+    channelSwitched: '已切换到通道 {channel}',
+    channelSwitchFailed: '通道切换失败',
     virtualMedia: '虚拟媒体',
     virtualMediaTip: '管理虚拟媒体设备',
     power: '电源',
@@ -109,6 +116,7 @@ export default {
     settingsTip: '系统设置',
     fullscreen: '全屏',
     fullscreenTip: '切换全屏模式',
+    // Video Config
     videoConfig: '视频配置',
     streamSettings: '流设置',
     deviceSettings: '设备配置',
@@ -140,6 +148,7 @@ export default {
     notRecommended: '不推荐',
     multiSourceCodecLocked: '{sources} 已启用，当前编码已锁定',
     multiSourceVideoParamsWarning: '{sources} 已启用，修改视频设备和输入参数将导致流中断',
+    // HID Config
     hidConfig: '鼠键配置',
     mouseSettings: '鼠标设置',
     hidDeviceSettings: 'HID 设备设置',
@@ -152,6 +161,7 @@ export default {
     absolute: '绝对定位',
     relative: '相对定位',
     applying: '应用中...',
+    // Audio Config
     audioConfig: '音频',
     playbackControl: '播放控制',
     volume: '音量',
@@ -215,16 +225,19 @@ export default {
     title: '初始化设置',
     welcome: '欢迎使用 One-KVM',
     description: '请完成初始设置以开始使用',
+    // Step titles
     stepAccount: '账号设置',
     stepVideo: '视频设置',
     stepAudioVideo: '音视频设置',
     stepHid: '鼠键设置',
+    // Account
     setUsername: '设置管理员用户名',
     usernameHint: '用户名至少2个字符',
     setPassword: '设置管理员密码',
     passwordHint: '密码至少4个字符',
     confirmPassword: '确认密码',
     passwordMismatch: '两次输入的密码不一致',
+    // Video
     videoDevice: '视频设备',
     selectVideoDevice: '选择视频采集设备',
     videoFormat: '画面格式',
@@ -234,13 +247,13 @@ export default {
     fps: '帧率',
     selectFps: '选择帧率',
     noVideoDevices: '未检测到视频设备',
-    noSignalDetected: '未检测到 HDMI 信号，请连接 HDMI 线缆后刷新。',
-    refreshDevices: '刷新设备',
+    // Audio
     audioDevice: '音频设备',
     selectAudioDevice: '选择音频采集设备',
     noAudio: '不使用音频',
     noAudioDevices: '未检测到音频设备',
     audioDeviceHelp: '选择用于捕获远程主机音频的设备。通常与视频采集卡在同一 USB 设备上。',
+    // HID
     hidBackend: 'HID 后端',
     selectHidBackend: '选择 HID 控制方式',
     serialHid: '串口 HID',
@@ -253,25 +266,31 @@ export default {
     selectUdc: '选择 UDC',
     noUdcDevices: '未检测到 UDC 设备',
     hidDisabledHint: '禁用 HID 后将无法控制远程主机的键盘和鼠标',
+    // Complete
     complete: '完成设置',
     setupFailed: '设置失败',
+    // Advanced encoder
     advancedEncoder: '高级选项：编码器后端',
     encoderHint: '默认的"自动"选项适用于大多数情况。仅在需要特定编码器后端时更改。',
     autoRecommended: '自动（推荐）',
     hardware: '硬件',
     software: '软件',
+    // Progress
     progress: '步骤 {current} / {total}',
+    // Help tooltips
     ch9329Help: 'CH9329 是一款串口转 HID 芯片，通过串口连接到主机。适用于大多数硬件配置。',
     otgHelp: 'USB OTG 模式通过 USB 设备控制器直接模拟 HID 设备。需要硬件支持 USB OTG 功能。',
     otgLowEndpointHint: '检测到低端点 UDC，将自动禁用多媒体键盘。',
     videoDeviceHelp: '选择用于捕获远程主机画面的视频采集设备。通常是 HDMI 采集卡。',
     videoFormatHelp: 'MJPEG 格式兼容性最好，H.264/H.265 带宽占用更低但需要编码支持。',
+    // Extensions
     stepExtensions: '扩展设置',
     extensionsDescription: '选择要自动启动的扩展服务',
     ttydTitle: 'Web 终端 (ttyd)',
     ttydDescription: '在浏览器中访问设备的命令行终端',
     extensionsHint: '这些设置可以在设置页面中随时更改',
     notInstalled: '未安装',
+    // Password strength
     passwordStrength: '密码强度',
     passwordWeak: '弱',
     passwordMedium: '中',
@@ -298,43 +317,7 @@ export default {
     configChanging: '正在应用新配置...',
     videoRestarted: '视频流已更新',
     streamError: '视频流错误',
-    // 四档视频状态（对应后端 StreamStateChanged：streaming / no_signal /
-    // device_lost / device_busy）.  `reason` 子键可选，用于在副文案中补充细节。
-    signal: {
-      noSignal: {
-        title: '暂无视频信号',
-        detail: '采集卡已就绪，正在等待被控机画面',
-      },
-      deviceLost: {
-        title: '视频设备已断开',
-        detail: '采集卡离线，正在尝试重新识别…',
-      },
-      deviceBusy: {
-        title: '视频通道忙',
-        detail: '正在切换配置或被其他组件占用，请稍候…',
-      },
-      uvc_usb_error: {
-        title: 'USB 采集传输异常',
-        detail: 'USB 采集卡遇到协议错误（EPROTO），可在 设置 → 环境 → USB 设备 中尝试复位。',
-      },
-      uvc_capture_stall: {
-        title: 'UVC 采集超时',
-        detail: '检查设备连接，若设备已连接，可尝试修改采集格式并复位设备。',
-      },
-      reason: {
-        no_cable: '未检测到 HDMI 线缆，请检查连接或被控机是否已开机',
-        no_sync: '信号不稳定，无法锁定时序，可尝试降低被控机分辨率/刷新率',
-        out_of_range: '分辨率或刷新率超出采集卡能力，建议切换到 1080p60 以内',
-        no_signal: '采集卡已就绪，正在等待画面…',
-        recovering: '正在自动重连视频设备',
-        device_lost: '视频节点丢失，等待驱动恢复',
-        config_changing: '正在应用新配置',
-        mode_switching: '正在切换视频模式',
-        uvc_usb_error:
-          '可尝试更换 USB 口或线、避免 HUB、或重新插拔设备；也可在 设置 → 环境 → USB 设备 中复位。',
-        uvc_capture_stall: '',
-      },
-    },
+    // WebRTC
     webrtcConnected: 'WebRTC 已连接',
     webrtcConnectedDesc: '正在使用 H.264 低延迟视频流',
     webrtcFailed: 'WebRTC 连接失败',
@@ -347,23 +330,29 @@ export default {
     webrtcPhaseSetRemote: '正在应用远端会话描述...',
     webrtcPhaseApplyIce: '正在应用 ICE 候选...',
     webrtcPhaseNegotiating: '正在协商安全连接...',
+    // Pointer Lock
     pointerLocked: '鼠标已锁定',
     pointerLockedDesc: '按 Escape 键释放鼠标',
     pointerLockFailed: '鼠标锁定失败',
     relativeModeHint: '相对鼠标模式',
     relativeModeHintDesc: '点击视频区域以锁定鼠标，按 Escape 释放',
+    // Meta Key Hint
     metaKeyHint: '检测到系统键',
     metaKeyHintDesc: '请进入全屏模式以捕获 Win/Meta 键',
+    // Stream mode change
     streamModeChanged: '视频模式已切换',
     streamModeChangedDesc: '服务器已切换到 {mode} 模式',
+    // 设备监控
     deviceLost: '视频设备丢失',
     deviceLostDesc: '{device}: {reason}',
     deviceRecovering: '视频设备恢复中',
     deviceRecoveringDesc: '正在尝试恢复视频设备（第 {attempt} 次）',
     deviceRecovered: '视频设备已恢复',
     deviceRecoveredDesc: '视频设备已成功重连',
+    // 加载状态
     pleaseWait: '请稍候...',
     retryCount: '正在重试 (第 {count} 次)',
+    // 错误详情
     errorDetails: '错误详情',
   },
   hid: {
@@ -375,6 +364,7 @@ export default {
     pasteText: '粘贴文本',
     absoluteMouse: '绝对定位',
     relativeMouse: '相对定位',
+    // 设备监控
     deviceLost: 'HID 设备丢失',
     deviceLostDesc: '{backend}: {reason}',
     reconnecting: 'HID 重连中',
@@ -401,6 +391,7 @@ export default {
     },
   },
   audio: {
+    // 设备监控
     deviceLost: '音频设备丢失',
     deviceLostDesc: '{device}: {reason}',
     reconnecting: '音频重连中',
@@ -444,6 +435,7 @@ export default {
     uploadImageHint: '点击上传 ISO/IMG 镜像',
     imageMounted: '镜像 {name} 已挂载',
     imageUnmounted: '镜像已卸载',
+    // URL download
     downloadFromUrl: '从 URL 下载',
     downloadFromUrlDesc: '输入镜像文件的 URL 地址，支持 ISO/IMG 格式',
     url: 'URL 地址',
@@ -454,13 +446,16 @@ export default {
     downloadFailed: '下载失败',
     largeFileWarning: '>2.2GB',
     largeFileTooltip: '文件大于 2.2GB，请使用 Flash 模式挂载',
+    // 设备监控
     error: 'MSD 错误',
     errorDesc: '{reason}',
     recovered: 'MSD 已恢复',
     recoveredDesc: 'MSD 设备已恢复正常',
+    // 操作状态
     operationInProgress: '操作进行中，请稍候',
     driveConnected: '虚拟U盘已连接',
     imageConnected: '镜像 {name} 已连接',
+    // 驱动器初始化
     selectDriveSize: '选择虚拟驱动器大小',
     selectedSize: '选定大小',
     customSize: '自定义大小',
@@ -492,6 +487,7 @@ export default {
     security: '安全',
     about: '关于',
     aboutDesc: '开放轻量的 IP-KVM 解决方案',
+    // Device info
     deviceInfo: '设备信息',
     deviceInfoDesc: '主机系统信息',
     hostname: '主机名',
@@ -516,9 +512,11 @@ export default {
     networkSettings: '网络设置',
     msdSettings: 'MSD 设置',
     atxSettings: 'ATX 设置',
+    // Network tab
     httpSettings: 'HTTP 设置',
     httpPort: 'HTTP 端口',
     configureHttpPort: '配置 HTTP 服务器端口',
+    // Web server
     webServer: '访问地址',
     webServerDesc: '配置 HTTP/HTTPS 端口和监听地址，修改后需要重启生效',
     httpsPort: 'HTTPS 端口',
@@ -538,17 +536,20 @@ export default {
     bindAddressListEmpty: '请至少填写一个 IP 地址。',
     httpsEnabled: '启用 HTTPS',
     httpsEnabledDesc: '启用 HTTPS 加密连接（未指定证书将生成自签证书）',
+    // Port config
     portConfig: '端口与协议',
     portConfigDesc: '服务一次只运行在一个端口上，由 HTTPS 开关决定使用哪个端口',
     httpPortReserved: 'HTTP 端口（备用）',
     httpsPortReserved: 'HTTPS 端口（备用）',
     previewUrl: '访问地址预览',
+    // Listen address
     listenAddress: '监听地址',
     listenAddressDesc: '配置 Web 服务监听哪些网络接口',
     bindModeAllDesc: '0.0.0.0 — 监听所有网络接口',
     bindModeLocalDesc: '127.0.0.1 — 仅允许本机访问',
     bindModeCustomDesc: '指定一组 IP 地址',
     effectiveAddresses: '监听地址预览',
+    // SSL certificate
     sslCertificate: 'SSL 证书',
     sslCertificateDesc: '上传自定义 PEM 证书替换自签名证书，修改后需要重启生效',
     sslCertCustom: '自定义证书',
@@ -594,11 +595,13 @@ export default {
     updateMsgVerifying: '校验中（SHA256）',
     updateMsgInstalling: '替换程序中',
     updateMsgRestarting: '服务重启中',
+    // Auth
     auth: '访问控制',
     authSettings: '访问设置',
     authSettingsDesc: '单用户访问与会话策略',
     allowMultipleSessions: '允许多个 Web 会话',
     allowMultipleSessionsDesc: '关闭后，新登录会踢掉旧会话。',
+    // User management
     userManagement: '用户管理',
     userManagementDesc: '管理用户账号和权限',
     addUser: '添加用户',
@@ -613,6 +616,7 @@ export default {
     noUsers: '暂无用户',
     create: '创建',
     confirmDeleteUser: '确定要删除用户 "{name}" 吗？',
+    // MSD/ATX status
     msdStatus: 'MSD 状态',
     atxStatus: 'ATX 状态',
     available: '可用',
@@ -628,6 +632,7 @@ export default {
     disabled: '已禁用',
     msdDesc: '虚拟存储设备允许您将 ISO 镜像和虚拟驱动器挂载到目标机器。请在主页面的 MSD 面板中管理镜像。',
     atxDesc: 'ATX 电源控制允许您远程开关机和重启目标机器。请在主页面的 ATX 面板中控制电源。',
+    // ATX configuration
     atxSettingsDesc: '配置 ATX 电源控制硬件绑定',
     atxEnable: '启用 ATX 控制',
     atxEnableDesc: '启用后可以远程控制电源和重启按钮',
@@ -655,13 +660,16 @@ export default {
     atxLedPin: 'GPIO 引脚',
     atxLedInverted: '反转逻辑',
     atxLedInvertedDesc: 'LED 亮起时 GPIO 为低电平',
+    // WOL configuration
     atxWolSettings: '网络唤醒设置',
     atxWolSettingsDesc: '配置 Wake-on-LAN 魔术包发送选项',
     atxWolInterface: '网络接口',
     atxWolInterfacePlaceholder: '例如: eth0, enp0s3',
     atxWolInterfaceHint: '指定发送 WOL 包的网络接口，留空则使用系统默认路由',
+    // Basic tab descriptions
     themeDesc: '选择您喜欢的颜色方案',
     languageDesc: '选择您的首选语言',
+    // Video tab
     videoSettings: '视频设置',
     videoSettingsDesc: '配置视频采集设备',
     videoDevice: '视频设备',
@@ -678,6 +686,7 @@ export default {
     software: '软件',
     supportedFormats: '支持的格式',
     encoderHint: '硬件编码器性能更好，CPU 占用更低。软件编码器兼容性更好，但需要更多 CPU 资源。',
+    // HID tab
     hidSettings: 'HID 设置',
     hidSettingsDesc: '配置键盘和鼠标控制',
     hidBackend: 'HID 后端',
@@ -706,6 +715,7 @@ export default {
     otgProfileWarning: '修改 HID 功能将导致 USB 设备重新连接',
     otgLowEndpointHint: '检测到低端点 UDC，将自动禁用多媒体键盘。',
     otgFunctionMinWarning: '请至少启用一个 HID 功能后再保存',
+    // OTG Descriptor
     otgDescriptor: 'USB 设备描述符',
     otgDescriptorDesc: '配置 USB 设备标识信息',
     vendorId: '厂商 ID (VID)',
@@ -804,21 +814,7 @@ export default {
       currentHardwareEncoder: '当前硬件编码器',
       none: '无',
     },
-    usbDevices: {
-      title: 'USB 设备',
-      desc: '查看已连接的 USB 设备，可通过复位恢复异常设备',
-      refresh: '刷新',
-      loadFailed: '加载 USB 设备列表失败',
-      noDevices: '未发现 USB 设备',
-      colDevice: '设备',
-      colSpeed: '速度',
-      colVideo: '视频',
-      colAction: '操作',
-      reset: '复位',
-      resetConfirmTitle: '确认复位 USB 设备',
-      resetConfirmDesc: '将通过 authorized 属性复位 USB 设备「{device}」，该设备上的所有连接将短暂中断。确定继续？',
-      resetAction: '确认复位',
-    },
+    // WebRTC / ICE
     webrtcSettings: 'WebRTC 设置',
     webrtcSettingsDesc: '配置 STUN/TURN 服务器以实现 NAT 穿透',
     publicIceServersHint: '留空将使用 Google 公共 STUN 服务器，TURN 服务器需自行配置',
@@ -887,6 +883,7 @@ export default {
     notConnected: '未连接',
     connected: '已连接',
     image: '镜像',
+    // MSD 状态详情
     msdStatus: '状态',
     msdStandby: '空闲',
     msdImageMode: '镜像模式',
@@ -896,6 +893,7 @@ export default {
     msdNoImage: '无',
   },
   extensions: {
+    // Common
     available: '可用',
     unavailable: '不可用',
     running: '运行中',
@@ -912,6 +910,7 @@ export default {
       title: '远程访问',
       desc: 'GOSTC 内网穿透与 Easytier 组网',
     },
+    // ttyd
     ttyd: {
       title: 'Ttyd 网页终端',
       desc: '通过 ttyd 提供网页终端访问',
@@ -920,6 +919,7 @@ export default {
       port: '端口',
       shell: 'Shell',
     },
+    // gostc
     gostc: {
       title: 'GOSTC 内网穿透',
       desc: '通过 GOSTC 实现内网穿透',
@@ -928,6 +928,7 @@ export default {
       key: '客户端密钥',
       tls: '启用 TLS',
     },
+    // easytier
     easytier: {
       title: 'Easytier 组网',
       desc: '通过 EasyTier 实现 P2P VPN 组网',
@@ -938,6 +939,7 @@ export default {
       virtualIp: '虚拟 IP',
       virtualIpHint: '留空则自动分配，手动指定需包含网段（如 10.0.0.1/24）',
     },
+    // rustdesk
     rustdesk: {
       title: 'RustDesk 远程',
       desc: '使用 RustDesk 客户端进行远程访问',
@@ -1028,24 +1030,31 @@ export default {
     p2p: 'P2P 直连',
     relay: 'TURN 中继',
   },
+  // 帮助提示文本
   help: {
+    // MSD 相关
     flashMode: 'Flash 模式将镜像作为 U 盘挂载，支持大多数 BIOS 启动',
     cdromMode: 'CDROM 模式将镜像作为光驱挂载，适用于需要光盘启动的系统',
     readOnlyMode: '只读模式更安全，目标系统无法修改镜像内容',
     readWriteMode: '读写模式允许目标系统写入数据，适用于需要保存配置的场景',
     driveSize: '虚拟驱动器大小。较大的驱动器支持存放更多文件，但初始化时间更长',
+    // 视频相关
     mjpegMode: 'MJPEG 模式兼容性最好，适用于所有浏览器，但延迟较高',
     webrtcMode: 'WebRTC 模式延迟更低，但需要浏览器支持相应编解码器',
     videoBitratePreset: '速度优先：最低延迟，适合网络较差的场景；均衡：画质和延迟平衡；质量优先：最佳画质，需要较好的网络带宽',
     encoderBackend: '硬件编码器性能更好功耗更低，软件编码器兼容性更好',
+    // HID 相关
     absoluteMode: '绝对定位模式直接映射鼠标坐标，适用于大多数场景',
     relativeMode: '相对定位模式发送鼠标移动增量，适用于游戏或特殊软件',
     mouseThrottle: '发送间隔控制鼠标事件的发送频率，较大的值可减少网络负载',
     hidBackend: 'OTG 后端需要硬件支持 USB OTG，CH9329 是串口 HID 芯片方案',
+    // ATX 相关
     atxActiveLevel: '活跃电平取决于您的硬件接线方式。高电平表示触发时输出高电压，低电平相反',
     wolInterface: '用于发送 Wake-on-LAN 魔术包的网络接口名称，如 eth0 或 br0',
+    // 网络相关
     stunServer: 'STUN 服务器用于 NAT 穿透，帮助建立 P2P 连接。留空使用公共服务器',
     turnServer: 'TURN 服务器在 P2P 连接失败时提供中继。需要更多带宽但连接更可靠',
+    // 音频相关
     audioQuality: '更高的质量意味着更好的音频效果，但需要更多的网络带宽',
   },
 }
