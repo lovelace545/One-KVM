@@ -19,6 +19,10 @@ jobs:
         with:
           submodules: recursive  # 必须拉取子模块
 
+      # 显式初始化并更新子模块（双重保险）
+      - name: Update submodules
+        run: git submodule update --init --recursive
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -27,7 +31,8 @@ jobs:
       - name: Bootstrap vcpkg
         run: |
           cd res/vcpkg
-          chmod +x vcpkg
+          chmod +x bootstrap-vcpkg.sh
+          ./bootstrap-vcpkg.sh
           ./vcpkg integrate install
 
       - name: Setup Rust
