@@ -1,0 +1,110 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 代码检查和测试
+  check:
+    name: Check & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+      
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Check code
+        run: cargo check --all-features
+      
+      - name: Run tests
+        run: cargo test --all-features --lib
+      
+      - name: Check formatting
+        run: cargo fmt -- --check
+      
+      - name: Run clippy
+        run: cargo clippy --all-features -- -D warnings
+
+  # 构建x86_64版本
+  build-x86_64:
+    name: Build x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+      
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+      
+      - name: Build x86_64
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-kvm-x86_64
+          path: target/x86_64-unknown-linux-gnu/release/one-kvm
+          retention-days: 5
+
+  # 构建web前端
+  build-web:
+    name: Build Web Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+      
+      - name: Install dependencies
+        working-directory: web
+        run: npm install
+      
+      - name: Build web
+        working-directory: web
+        run: npm run build
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-kvm-web
+          path: web/dist
+          retention-days: 5
+
+  # 构建Docker镜像
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [ check, build-x86_64, build-web ]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: docker/setup-buildx-action@v3
+      
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./build/Dockerfile.runtime
+          push: false
+          tags: one-kvm:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
