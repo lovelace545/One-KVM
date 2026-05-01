@@ -16,12 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+        with:
+          submodules: recursive  # 🔥 关键：拉取 vcpkg 子模块
+
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - uses: Swatinem/rust-cache@v2
-      
-      - name: Install full build dependencies
+
+      # 🔥 安装所有编译依赖（一次性解决所有系统库）
+      - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -31,12 +34,7 @@ jobs:
             pkg-config \
             libudev-dev \
             libasound2-dev \
-            libssl-dev \
-            libx11-dev \
-            libxcb-composite0-dev \
-            libxcb-randr0-dev \
-            libxcb-image0-dev \
-            libxcb-shm0-dev
+            libssl-dev
 
       - name: Check code
         run: cargo check --all-features
