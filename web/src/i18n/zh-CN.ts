@@ -796,7 +796,7 @@ export default {
     atxWolSettingsDesc: '配置 Wake-on-LAN 魔术包发送选项',
     atxWolInterface: '网络接口',
     atxWolInterfacePlaceholder: '例如: eth0, enp0s3',
-    kvm: {
+    kvmSwitch: {
       title: 'KVM 切换器',
       description: '配置外部 4 通道 KVM 切换器的串口连接',
       enable: '启用 KVM 切换',
@@ -805,6 +805,8 @@ export default {
       selectSerialPort: '选择串口...',
       none: '未选择',
       baudRate: '波特率',
+      channelShort: 'CH{ch}',
+      currentChannel: '当前通道',
     },
     themeDesc: '选择界面颜色方案',
     languageDesc: '选择界面显示语言',

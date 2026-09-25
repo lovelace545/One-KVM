@@ -126,11 +126,9 @@ impl KvmController {
 
             debug!("KVM switch: sent {:?}, waiting for {:?}", cmd, expected);
 
-            // Give the switch 150ms to process, then drain remaining old-channel data.
-            std::thread::sleep(Duration::from_millis(150));
-            let _ = port.read(&mut drain);
-
             // Read until we see the TARGET channel confirmation or timeout.
+            // The switch continuously streams current channel; we only match the
+            // target channel, so stale data (old channel) won't false-positive.
             let mut buf: Vec<u8> = Vec::with_capacity(32);
             let mut byte = [0u8; 1];
             let start = std::time::Instant::now();

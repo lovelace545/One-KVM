@@ -797,7 +797,7 @@ export default {
     atxWolSettingsDesc: 'Configure WOL magic packet sending options',
     atxWolInterface: 'Network Interface',
     atxWolInterfacePlaceholder: 'e.g. eth0, enp0s3',
-    kvm: {
+    kvmSwitch: {
       title: 'KVM Switch',
       description: 'Configure serial connection for the external 4-channel KVM switch',
       enable: 'Enable KVM Switch',
@@ -806,6 +806,8 @@ export default {
       selectSerialPort: 'Select serial port...',
       none: 'None',
       baudRate: 'Baud Rate',
+      channelShort: 'CH{ch}',
+      currentChannel: 'Current Channel',
     },
     themeDesc: 'Choose the interface color scheme',
     languageDesc: 'Choose the interface display language',

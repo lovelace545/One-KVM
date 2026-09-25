@@ -131,8 +131,10 @@ const kvmSwitching = ref(false)
 
 const mobileAtxOpen = ref(false)
 const mobilePasteOpen = ref(false)
+const mobileKvmOpen = ref(false)
 const mobileAtxOpenTime = ref(0)
 const mobilePasteOpenTime = ref(0)
+const mobileKvmOpenTime = ref(0)
 
 const OPEN_GUARD_MS = 350
 
@@ -157,6 +159,12 @@ const openMobilePaste = () => openFromOverflow(() => {
   if (!showPasteText.value) return
   mobilePasteOpen.value = true
   mobilePasteOpenTime.value = Date.now()
+})
+
+const openMobileKvm = () => openFromOverflow(() => {
+  if (!kvmAvailable.value) return
+  mobileKvmOpen.value = true
+  mobileKvmOpenTime.value = Date.now()
 })
 
 async function fetchKvmStatus() {
@@ -209,8 +217,8 @@ interface ItemSpec {
 const ITEM_SPECS: ItemSpec[] = [
   { id: 'msd',       side: 'left' },
   { id: 'atx',       side: 'left' },
-  { id: 'paste',     side: 'left' },
   { id: 'kvm',       side: 'left' },
+  { id: 'paste',     side: 'left' },
   { id: 'stats',     side: 'right' },
   { id: 'terminal',  side: 'right' },
   { id: 'settings',  side: 'right' },
@@ -333,7 +341,7 @@ const visibleSet = computed(() => {
   if (isSidebarLayout.value) {
     // Reserve More and a gap between the two groups before assigning vertical slots.
     let available = barHeight.value - coreHeight.value - fixedHeight.value - actionHeight.value - 16
-    const priority: CollapsibleItem[] = ['paste', 'kvm', 'settings', 'msd', 'atx', 'stats', 'terminal', 'ai']
+    const priority: CollapsibleItem[] = ['kvm', 'paste', 'settings', 'msd', 'atx', 'stats', 'terminal', 'ai']
     for (const id of priority) {
       if (!collapsibleItems.value.some(item => item.id === id)) continue
       if (available < actionHeight.value) break
@@ -503,33 +511,6 @@ const hasRightOverflow = computed(() => {
           </Popover>
         </div>
 
-        <!-- Paste Text - Adaptive -->
-        <div v-if="showPasteText && isVisible('paste')">
-          <Popover v-model:open="pasteOpen">
-            <PopoverTrigger as-child>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-8 gap-1.5 text-xs"
-                :aria-label="t('actionbar.paste')"
-                :title="t('actionbar.paste')"
-              >
-                <ClipboardPaste class="size-4" />
-                <span v-if="visibleSet.get('paste') === 'label'">{{ t('actionbar.paste') }}</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              :class="isSidebarLayout
-                ? 'w-[min(400px,calc(100vw-4.5rem))] p-0'
-                : 'w-[min(400px,90vw)] p-0'"
-              align="start"
-              :side="isSidebarLayout ? 'right' : 'bottom'"
-            >
-              <PasteModal v-if="pasteOpen" @close="pasteOpen = false" />
-            </PopoverContent>
-          </Popover>
-        </div>
-
         <!-- KVM Switch - Adaptive -->
         <div v-if="kvmAvailable && isVisible('kvm')">
           <Popover v-model:open="kvmPopoverOpen">
@@ -568,6 +549,33 @@ const hasRightOverflow = computed(() => {
                   {{ t('kvm.channel', { ch }) }}
                 </Button>
               </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <!-- Paste Text - Adaptive -->
+        <div v-if="showPasteText && isVisible('paste')">
+          <Popover v-model:open="pasteOpen">
+            <PopoverTrigger as-child>
+              <Button
+                variant="ghost"
+                size="sm"
+                class="h-8 gap-1.5 text-xs"
+                :aria-label="t('actionbar.paste')"
+                :title="t('actionbar.paste')"
+              >
+                <ClipboardPaste class="size-4" />
+                <span v-if="visibleSet.get('paste') === 'label'">{{ t('actionbar.paste') }}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              :class="isSidebarLayout
+                ? 'w-[min(400px,calc(100vw-4.5rem))] p-0'
+                : 'w-[min(400px,90vw)] p-0'"
+              align="start"
+              :side="isSidebarLayout ? 'right' : 'bottom'"
+            >
+              <PasteModal v-if="pasteOpen" @close="pasteOpen = false" />
             </PopoverContent>
           </Popover>
         </div>
@@ -710,7 +718,7 @@ const hasRightOverflow = computed(() => {
             </DropdownMenuItem>
 
             <!-- KVM Switch -->
-            <DropdownMenuItem v-if="kvmAvailable && !isVisible('kvm')" @click="openFromOverflow(() => kvmPopoverOpen = true)">
+            <DropdownMenuItem v-if="kvmAvailable && !isVisible('kvm')" @click="openMobileKvm">
               <Monitor class="size-4 mr-2" />
               {{ t('kvm.title') }}<template v-if="kvmCurrentChannel > 0">: {{ kvmCurrentChannel }}</template>
             </DropdownMenuItem>
@@ -802,6 +810,38 @@ const hasRightOverflow = computed(() => {
     </SheetContent>
   </Sheet>
 
+  <!-- Mobile KVM Sheet -->
+  <Sheet v-if="kvmAvailable" v-model:open="mobileKvmOpen">
+    <SheetContent
+      side="bottom"
+      class="max-h-[90dvh] overflow-y-auto"
+      @pointer-down-outside="(e) => guardOutside(mobileKvmOpenTime, e)"
+      @interact-outside="(e) => guardOutside(mobileKvmOpenTime, e)"
+    >
+      <SheetHeader class="mb-2">
+        <SheetTitle>{{ t('kvm.title') }}</SheetTitle>
+      </SheetHeader>
+      <div class="p-2">
+        <div class="text-xs text-muted-foreground mb-2 px-1">{{ t('kvm.selectChannel') }}</div>
+        <div class="grid grid-cols-2 gap-1">
+          <Button
+            v-for="ch in [1, 2, 3, 4]"
+            :key="ch"
+            variant="ghost"
+            size="sm"
+            class="h-10 justify-start"
+            :class="kvmCurrentChannel === ch ? 'bg-accent text-accent-foreground' : ''"
+            :disabled="kvmSwitching"
+            @click="switchKvmChannel(ch)"
+          >
+            <span class="size-2 rounded-full mr-2" :class="kvmCurrentChannel === ch ? 'bg-green-500' : 'bg-muted'" />
+            {{ t('kvm.channel', { ch }) }}
+          </Button>
+        </div>
+      </div>
+    </SheetContent>
+  </Sheet>
+
   <!-- Hidden measurement container: renders each collapsible button in both
        icon-only and with-label forms so we can read their real offsetWidth. -->
   <div ref="measureRef" aria-hidden="true" class="fixed pointer-events-none" style="visibility: hidden; top: -9999px; left: -9999px; white-space: nowrap;">
@@ -812,12 +852,12 @@ const hasRightOverflow = computed(() => {
       <!-- ATX -->
       <Button data-measure="atx-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Power class="size-4" /></Button>
       <Button data-measure="atx-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Power class="size-4" />{{ t('actionbar.power') }}</Button>
-      <!-- Paste -->
-      <Button data-measure="paste-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><ClipboardPaste class="size-4" /></Button>
-      <Button data-measure="paste-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><ClipboardPaste class="size-4" />{{ t('actionbar.paste') }}</Button>
       <!-- KVM -->
       <Button data-measure="kvm-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Monitor class="size-4" /></Button>
       <Button data-measure="kvm-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Monitor class="size-4" />{{ t('kvm.title') }}</Button>
+      <!-- Paste -->
+      <Button data-measure="paste-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><ClipboardPaste class="size-4" /></Button>
+      <Button data-measure="paste-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><ClipboardPaste class="size-4" />{{ t('actionbar.paste') }}</Button>
       <!-- Stats -->
       <Button data-measure="stats-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><BarChart3 class="size-4" /></Button>
       <Button data-measure="stats-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><BarChart3 class="size-4" />{{ t('actionbar.stats') }}</Button>

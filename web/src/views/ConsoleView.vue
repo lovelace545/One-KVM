@@ -17,7 +17,7 @@ import { useTheme } from '@/composables/useTheme'
 import { useConsoleLayout } from '@/composables/useConsoleLayout'
 import { getUnifiedAudio } from '@/composables/useUnifiedAudio'
 import { getMicrophone } from '@/composables/useMicrophone'
-import { streamApi, hidApi, atxApi, atxConfigApi, authApi, computerUseApi, uacApi } from '@/api'
+import { streamApi, hidApi, atxApi, atxConfigApi, authApi, computerUseApi, uacApi, kvmApi } from '@/api'
 import type { ComputerUseScreenshot, ComputerUseSession } from '@/api'
 import { CanonicalKey, HidBackend } from '@/types/generated'
 import type { HidKeyboardEvent, HidMouseEvent } from '@/types/hid'
@@ -290,6 +290,8 @@ const consoleStatusItems = computed<ConsoleStatusItem[]>(() => {
       quickInfo: audioQuickInfo.value, details: audioDetails.value, errorMessage: audioErrorMessage.value },
     { id: 'hid', title: t('statusCard.hid'), status: hidStatus.value,
       quickInfo: hidQuickInfo.value, details: hidDetails.value, errorMessage: hidErrorMessage.value, required: true },
+    { id: 'kvm', title: t('kvm.title'), status: kvmStatus.value,
+      quickInfo: kvmQuickInfo.value, details: kvmDetails.value },
   ]
   if (showMsdStatusCard.value) items.push({
     id: 'msd', title: t('statusCard.msd'), status: msdStatus.value,
@@ -615,6 +617,35 @@ const msdQuickInfo = computed(() => {
 
 const msdErrorMessage = computed(() => {
   return systemStore.msd?.error || ''
+})
+
+// KVM switch status
+const kvmStatusData = ref<{ available: boolean; current_channel: number }>({ available: false, current_channel: 0 })
+async function fetchKvmStatus() {
+  try {
+    const s = await kvmApi.status()
+    kvmStatusData.value = s
+  } catch {
+    kvmStatusData.value = { available: false, current_channel: 0 }
+  }
+}
+onMounted(() => { fetchKvmStatus(); setInterval(fetchKvmStatus, 10000) })
+
+const kvmStatus = computed<ConnectionStatus>(() => {
+  if (!kvmStatusData.value.available) return 'disconnected'
+  if (kvmStatusData.value.current_channel > 0) return 'connected'
+  return 'connecting'
+})
+const kvmQuickInfo = computed(() => {
+  if (!kvmStatusData.value.available) return ''
+  return kvmStatusData.value.current_channel > 0 ? t('kvm.channelShort', { ch: kvmStatusData.value.current_channel }) : ''
+})
+const kvmDetails = computed<StatusDetail[]>(() => {
+  if (!kvmStatusData.value.available) return []
+  return [
+    { label: t('statusCard.connection'), value: t('statusCard.connected'), status: 'ok' },
+    { label: t('kvm.currentChannel'), value: `CH${kvmStatusData.value.current_channel}`, status: undefined },
+  ]
 })
 
 const msdDetails = computed<StatusDetail[]>(() => {
