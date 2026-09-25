@@ -9,6 +9,7 @@ mod audio_api;
 mod auth;
 mod computer_use;
 mod hid_api;
+mod kvm_api;
 mod inventory;
 #[cfg(unix)]
 mod msd_api;
@@ -24,6 +25,7 @@ pub use audio_api::*;
 pub use auth::*;
 pub use computer_use::*;
 pub use hid_api::*;
+pub use kvm_api::*;
 pub use inventory::*;
 #[cfg(unix)]
 pub use msd_api::*;

@@ -12,6 +12,7 @@ use crate::db::{open_database_pool, DatabasePool};
 use crate::events::EventBus;
 use crate::extensions::ExtensionManager;
 use crate::hid::{HidBackendType, HidController};
+use crate::kvm::KvmController;
 #[cfg(unix)]
 use crate::msd::MsdController;
 #[cfg(unix)]
@@ -116,6 +117,7 @@ impl RuntimeBuilder {
         #[cfg(unix)]
         let msd = build_msd(&config, &data_dir, &otg_service, &events).await;
         let atx = build_atx(&config).await;
+        let kvm = build_kvm(&config).await;
         let audio = build_audio(&config, &events).await;
         let extensions = Arc::new(ExtensionManager::new());
         tracing::info!("Extension manager initialized");
@@ -168,6 +170,7 @@ impl RuntimeBuilder {
             #[cfg(unix)]
             msd,
             atx,
+            kvm,
             audio,
             extensions.clone(),
             events.clone(),
@@ -455,6 +458,20 @@ async fn build_atx(config: &AppConfig) -> Option<AtxController> {
     let controller = AtxController::new(config.atx.to_controller_config());
     if let Err(error) = controller.init().await {
         tracing::warn!("Failed to initialize ATX controller: {}", error);
+        return None;
+    }
+    Some(controller)
+}
+
+async fn build_kvm(config: &AppConfig) -> Option<KvmController> {
+    if !config.kvm.enabled {
+        tracing::info!("KVM switch disabled in configuration");
+        return None;
+    }
+
+    let controller = KvmController::new(config.kvm.to_controller_config());
+    if let Err(error) = controller.init().await {
+        tracing::warn!("Failed to initialize KVM switch controller: {}", error);
         return None;
     }
     Some(controller)

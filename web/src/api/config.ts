@@ -167,6 +167,22 @@ export const atxConfigApi = {
     request<WolHistoryResponse>(`/atx/wol/history?limit=${Math.max(1, Math.min(50, limit))}`),
 }
 
+export interface KvmConfig {
+  enabled: boolean
+  device: string
+  baud_rate: number
+}
+
+export const kvmConfigApi = {
+  get: () => request<KvmConfig>('/config/kvm'),
+
+  update: (config: KvmConfig) =>
+    request<KvmConfig>('/config/kvm', {
+      method: 'PATCH',
+      body: JSON.stringify(config),
+    }),
+}
+
 export const audioConfigApi = {
   get: () => request<AudioConfig>('/config/audio'),
 

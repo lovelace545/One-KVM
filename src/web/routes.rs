@@ -235,6 +235,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/atx/power", post(handlers::atx_power))
         .route("/atx/wol", post(handlers::atx_wol))
         .route("/atx/wol/history", get(handlers::atx_wol_history))
+        // KVM switch endpoints
+        .route("/kvm/status", get(handlers::kvm_status))
+        .route("/kvm/switch", post(handlers::kvm_switch))
+        .route("/config/kvm", get(handlers::get_kvm_config))
+        .route("/config/kvm", patch(handlers::update_kvm_config))
         // Device discovery endpoints
         .route("/devices/atx", get(handlers::devices::list_atx_devices))
         // Extension management endpoints

@@ -15,6 +15,7 @@ use crate::events::{
 };
 use crate::extensions::{ExtensionId, ExtensionManager};
 use crate::hid::HidController;
+use crate::kvm::KvmController;
 #[cfg(unix)]
 use crate::msd::MsdController;
 #[cfg(unix)]
@@ -76,6 +77,7 @@ pub struct AppState {
     #[cfg(unix)]
     pub msd: Arc<RwLock<Option<MsdController>>>,
     pub atx: Arc<RwLock<Option<AtxController>>>,
+    pub kvm: Arc<RwLock<Option<KvmController>>>,
     pub audio: Arc<AudioController>,
     #[cfg(unix)]
     pub uac_playback: Arc<RwLock<Option<crate::audio::uac::UacPlayback>>>,
@@ -107,6 +109,7 @@ impl AppState {
         computer_use: Arc<ComputerUseManager>,
         #[cfg(unix)] msd: Option<MsdController>,
         atx: Option<AtxController>,
+        kvm: Option<KvmController>,
         audio: Arc<AudioController>,
         extensions: Arc<ExtensionManager>,
         events: Arc<EventBus>,
@@ -153,6 +156,7 @@ impl AppState {
             #[cfg(unix)]
             msd,
             atx: Arc::new(RwLock::new(atx)),
+            kvm: Arc::new(RwLock::new(kvm)),
             audio,
             usb,
             remote_access,

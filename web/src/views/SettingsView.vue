@@ -17,6 +17,7 @@ import {
   hidApi,
   streamApi,
   atxConfigApi,
+  kvmConfigApi,
   extensionsApi,
   redfishConfigApi,
   rtspConfigApi,
@@ -184,6 +185,7 @@ const SETTINGS_SECTION_IDS = [
   'video',
   'hid',
   'atx',
+  'kvm',
   'environment',
   'other',
   'ext-ttyd',
@@ -210,6 +212,7 @@ const navGroups = computed(() => [
       { id: 'video', label: t('settings.video'), icon: Monitor },
       { id: 'hid', label: t('settings.hid'), icon: Keyboard },
       { id: 'atx', label: t('settings.atx'), icon: Power },
+      { id: 'kvm', label: t('settings.kvm.title'), icon: Monitor },
       { id: 'environment', label: t('settings.environment'), icon: Server },
       { id: 'other', label: t('settings.other'), icon: Wrench },
     ]
@@ -302,6 +305,9 @@ async function loadSectionData(section: SettingsSectionId) {
         loadAtxConfig(),
         loadAtxDevices(),
       ])
+      return
+    case 'kvm':
+      await Promise.all([loadKvmConfig(), loadAtxDevices()])
       return
     case 'environment':
       return
@@ -1221,6 +1227,13 @@ const atxConfig = ref({
   wol_interface: '',
 })
 
+const kvmConfig = ref({
+  enabled: false,
+  device: '',
+  baud_rate: 19200,
+})
+const kvmSaving = ref(false)
+const kvmSaved = ref(false)
 const atxSaving = ref(false)
 const atxSaved = ref(false)
 const wolSaving = ref(false)
@@ -1859,6 +1872,35 @@ async function loadAtxDevices() {
   }
 }
 
+async function loadKvmConfig() {
+  try {
+    const cfg = await kvmConfigApi.get()
+    kvmConfig.value = {
+      enabled: cfg.enabled,
+      device: cfg.device || '',
+      baud_rate: cfg.baud_rate || 19200,
+    }
+  } catch {
+  }
+}
+
+async function saveKvmConfig() {
+  kvmSaving.value = true
+  kvmSaved.value = false
+  try {
+    await kvmConfigApi.update({
+      enabled: kvmConfig.value.enabled,
+      device: kvmConfig.value.device,
+      baud_rate: kvmConfig.value.baud_rate,
+    })
+    kvmSaved.value = true
+    setTimeout(() => (kvmSaved.value = false), 2000)
+  } catch (e) {
+    toast.error(t('common.error'))
+  } finally {
+    kvmSaving.value = false
+  }
+}
 async function saveAtxSettings() {
   atxSaving.value = true
   atxSaved.value = false
@@ -4324,6 +4366,60 @@ watch(isWindows, () => {
               <CardFooter class="border-t pt-4 justify-end">
                 <Button :disabled="wolSaving" @click="saveWolSettings">
                   <Loader2 v-if="wolSaving" class="size-4 mr-2 animate-spin" /><Check v-else-if="wolSaved" class="size-4 mr-2" /><Save v-else class="size-4 mr-2" />{{ wolSaving ? t('actionbar.applying') : wolSaved ? t('common.success') : t('common.save') }}
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+
+          <!-- KVM Section -->
+          <div v-show="activeSection === 'kvm'" class="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>{{ t('settings.kvm.title') }}</CardTitle>
+                <CardDescription>{{ t('settings.kvm.description') }}</CardDescription>
+              </CardHeader>
+              <CardContent class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <div class="space-y-0.5">
+                    <Label>{{ t('settings.kvm.enable') }}</Label>
+                    <p class="text-sm text-muted-foreground">{{ t('settings.kvm.enableDesc') }}</p>
+                  </div>
+                  <Switch v-model="kvmConfig.enabled" />
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div class="space-y-2">
+                    <Label for="kvm-device">{{ t('settings.kvm.serialPort') }}</Label>
+                    <Select
+                      :model-value="kvmConfig.device || EMPTY_SELECT_VALUE"
+                      @update:model-value="value => kvmConfig.device = value === EMPTY_SELECT_VALUE ? '' : String(value)"
+                    >
+                      <SelectTrigger id="kvm-device" class="w-full"><SelectValue :placeholder="t('settings.kvm.selectSerialPort')" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem :value="EMPTY_SELECT_VALUE">{{ t('settings.kvm.none') }}</SelectItem>
+                        <SelectItem v-for="port in atxDevices.serial_ports" :key="port" :value="port">{{ port }}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div class="space-y-2">
+                    <Label for="kvm-baud">{{ t('settings.kvm.baudRate') }}</Label>
+                    <Select :model-value="kvmConfig.baud_rate" @update:model-value="value => kvmConfig.baud_rate = Number(value)">
+                      <SelectTrigger id="kvm-baud" class="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem :value="9600">9600</SelectItem>
+                        <SelectItem :value="19200">19200</SelectItem>
+                        <SelectItem :value="38400">38400</SelectItem>
+                        <SelectItem :value="57600">57600</SelectItem>
+                        <SelectItem :value="115200">115200</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter class="border-t pt-4 justify-end">
+                <Button :disabled="kvmSaving" @click="saveKvmConfig">
+                  <Loader2 v-if="kvmSaving" class="size-4 mr-2 animate-spin" /><Check v-else-if="kvmSaved" class="size-4 mr-2" /><Save v-else class="size-4 mr-2" />{{ kvmSaving ? t('actionbar.applying') : kvmSaved ? t('common.success') : t('common.save') }}
                 </Button>
               </CardFooter>
             </Card>

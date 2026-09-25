@@ -2,8 +2,10 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
 import { useSystemStore } from '@/stores/system'
 import type { VideoRotation, VideoScaleMode } from '@/composables/useVideoScaling'
+import { kvmApi } from '@/api'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import {
@@ -43,6 +45,7 @@ import {
   ChevronDown,
   Keyboard,
   Scaling,
+  Monitor,
 } from 'lucide-vue-next'
 import PasteModal from '@/components/PasteModal.vue'
 import AtxPopover from '@/components/AtxPopover.vue'
@@ -121,6 +124,11 @@ const hidPopoverOpen = ref(false)
 const audioPopoverOpen = ref(false)
 const msdDialogOpen = ref(false)
 
+const kvmPopoverOpen = ref(false)
+const kvmAvailable = ref(false)
+const kvmCurrentChannel = ref(0)
+const kvmSwitching = ref(false)
+
 const mobileAtxOpen = ref(false)
 const mobilePasteOpen = ref(false)
 const mobileAtxOpenTime = ref(0)
@@ -151,6 +159,31 @@ const openMobilePaste = () => openFromOverflow(() => {
   mobilePasteOpenTime.value = Date.now()
 })
 
+async function fetchKvmStatus() {
+  try {
+    const status = await kvmApi.status()
+    kvmAvailable.value = status.available
+    kvmCurrentChannel.value = status.current_channel
+  } catch {
+    kvmAvailable.value = false
+  }
+}
+
+async function switchKvmChannel(channel: number) {
+  if (kvmSwitching.value) return
+  kvmSwitching.value = true
+  try {
+    await kvmApi.switch(channel)
+    kvmCurrentChannel.value = channel
+    kvmPopoverOpen.value = false
+    toast.success(t('kvm.switchedTo', { channel }))
+  } catch {
+    toast.error(t('kvm.switchFailed'))
+  } finally {
+    kvmSwitching.value = false
+  }
+}
+
 
 const barRef = ref<HTMLElement | null>(null)
 const measureRef = ref<HTMLElement | null>(null)
@@ -165,7 +198,7 @@ const alwaysRightWidth = ref(152)
 let layoutResizeObserver: ResizeObserver | null = null
 
 type CollapsibleItem =
-  | 'msd' | 'atx' | 'paste'
+  | 'msd' | 'atx' | 'paste' | 'kvm'
   | 'stats' | 'terminal' | 'settings' | 'ai'
 
 interface ItemSpec {
@@ -177,6 +210,7 @@ const ITEM_SPECS: ItemSpec[] = [
   { id: 'msd',       side: 'left' },
   { id: 'atx',       side: 'left' },
   { id: 'paste',     side: 'left' },
+  { id: 'kvm',       side: 'left' },
   { id: 'stats',     side: 'right' },
   { id: 'terminal',  side: 'right' },
   { id: 'settings',  side: 'right' },
@@ -245,6 +279,7 @@ const observeLayout = async () => {
 
 onMounted(() => {
   void observeLayout()
+  void fetchKvmStatus()
 })
 
 onUnmounted(() => {
@@ -282,6 +317,7 @@ const collapsibleItems = computed(() => {
     if (item.id === 'msd' && !showMsd.value) return false
     if (item.id === 'atx' && !showAtx.value) return false
     if (item.id === 'paste' && !showPasteText.value) return false
+    if (item.id === 'kvm' && !kvmAvailable.value) return false
     if (item.id === 'stats' && !showStats.value) return false
     if (item.id === 'terminal' && props.showTerminal === false) return false
     if (item.id === 'ai' && props.showComputerUse === false) return false
@@ -297,7 +333,7 @@ const visibleSet = computed(() => {
   if (isSidebarLayout.value) {
     // Reserve More and a gap between the two groups before assigning vertical slots.
     let available = barHeight.value - coreHeight.value - fixedHeight.value - actionHeight.value - 16
-    const priority: CollapsibleItem[] = ['paste', 'settings', 'msd', 'atx', 'stats', 'terminal', 'ai']
+    const priority: CollapsibleItem[] = ['paste', 'kvm', 'settings', 'msd', 'atx', 'stats', 'terminal', 'ai']
     for (const id of priority) {
       if (!collapsibleItems.value.some(item => item.id === id)) continue
       if (available < actionHeight.value) break
@@ -494,6 +530,48 @@ const hasRightOverflow = computed(() => {
           </Popover>
         </div>
 
+        <!-- KVM Switch - Adaptive -->
+        <div v-if="kvmAvailable && isVisible('kvm')">
+          <Popover v-model:open="kvmPopoverOpen">
+            <PopoverTrigger as-child>
+              <Button
+                variant="ghost"
+                size="sm"
+                class="h-8 gap-1.5 text-xs"
+                :aria-label="t('kvm.title')"
+                :title="t('kvm.title')"
+              >
+                <Monitor class="size-4" />
+                <span v-if="visibleSet.get('kvm') === 'label'">
+                  {{ t('kvm.title') }}<template v-if="kvmCurrentChannel > 0">: {{ kvmCurrentChannel }}</template>
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              class="w-48 p-2"
+              align="start"
+              :side="isSidebarLayout ? 'right' : 'bottom'"
+            >
+              <div class="text-xs text-muted-foreground mb-2 px-1">{{ t('kvm.selectChannel') }}</div>
+              <div class="grid grid-cols-2 gap-1">
+                <Button
+                  v-for="ch in [1, 2, 3, 4]"
+                  :key="ch"
+                  variant="ghost"
+                  size="sm"
+                  class="h-9 justify-start"
+                  :class="kvmCurrentChannel === ch ? 'bg-accent text-accent-foreground' : ''"
+                  :disabled="kvmSwitching"
+                  @click="switchKvmChannel(ch)"
+                >
+                  <span class="size-2 rounded-full mr-2" :class="kvmCurrentChannel === ch ? 'bg-green-500' : 'bg-muted'" />
+                  {{ t('kvm.channel', { ch }) }}
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+
       </ButtonGroup>
 
       <!-- Right side buttons -->
@@ -631,6 +709,12 @@ const hasRightOverflow = computed(() => {
               {{ t('actionbar.paste') }}
             </DropdownMenuItem>
 
+            <!-- KVM Switch -->
+            <DropdownMenuItem v-if="kvmAvailable && !isVisible('kvm')" @click="openFromOverflow(() => kvmPopoverOpen = true)">
+              <Monitor class="size-4 mr-2" />
+              {{ t('kvm.title') }}<template v-if="kvmCurrentChannel > 0">: {{ kvmCurrentChannel }}</template>
+            </DropdownMenuItem>
+
             <DropdownMenuSeparator v-if="hasLeftOverflow && hasRightOverflow" />
 
             <!-- Stats -->
@@ -731,6 +815,9 @@ const hasRightOverflow = computed(() => {
       <!-- Paste -->
       <Button data-measure="paste-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><ClipboardPaste class="size-4" /></Button>
       <Button data-measure="paste-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><ClipboardPaste class="size-4" />{{ t('actionbar.paste') }}</Button>
+      <!-- KVM -->
+      <Button data-measure="kvm-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Monitor class="size-4" /></Button>
+      <Button data-measure="kvm-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><Monitor class="size-4" />{{ t('kvm.title') }}</Button>
       <!-- Stats -->
       <Button data-measure="stats-icon" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><BarChart3 class="size-4" /></Button>
       <Button data-measure="stats-label" variant="ghost" size="sm" class="h-8 gap-1.5 text-xs"><BarChart3 class="size-4" />{{ t('actionbar.stats') }}</Button>

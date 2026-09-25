@@ -215,6 +215,13 @@ async fn cleanup(state: &Arc<AppState>) {
         }
     }
 
+    let kvm = state.kvm.write().await.take();
+    if let Some(kvm) = kvm {
+        if let Err(error) = kvm.shutdown().await {
+            tracing::warn!("Failed to shutdown KVM switch: {}", error);
+        }
+    }
+
     if let Err(error) = state.audio.shutdown().await {
         tracing::warn!("Failed to shutdown audio: {}", error);
     }

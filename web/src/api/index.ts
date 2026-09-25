@@ -569,6 +569,22 @@ export const atxApi = {
     }),
 }
 
+export interface KvmStatusResponse {
+  available: boolean
+  current_channel: number
+}
+
+export const kvmApi = {
+  status: () =>
+    request<KvmStatusResponse>('/kvm/status', {}, { toastOnError: false }),
+
+  switch: (channel: number) =>
+    request<{ success: boolean; message?: string }>('/kvm/switch', {
+      method: 'POST',
+      body: JSON.stringify({ channel }),
+    }),
+}
+
 export interface MsdImage {
   id: string
   name: string
@@ -838,6 +854,7 @@ export {
   uacApi,
   atxConfigApi,
   audioConfigApi,
+  kvmConfigApi,
   extensionsApi,
   redfishConfigApi,
   rustdeskConfigApi,
