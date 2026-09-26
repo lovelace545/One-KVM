@@ -1,17 +1,15 @@
 use serde::{Deserialize, Serialize};
 use typeshare::typeshare;
 
-/// Configuration for the external 4-channel KVM switch connected over serial.
 #[typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct KvmConfig {
-    /// Whether the KVM switch control is enabled.
     pub enabled: bool,
-    /// Serial device path (e.g. `/dev/ttyUSB0`, `/dev/ttyAMA0`, `COM3`).
     pub device: String,
-    /// Serial baud rate (default 19200).
     pub baud_rate: u32,
+    pub send_template: String,
+    pub recv_template: String,
 }
 
 impl Default for KvmConfig {
@@ -20,6 +18,8 @@ impl Default for KvmConfig {
             enabled: false,
             device: String::new(),
             baud_rate: 19200,
+            send_template: "SW{ch}\\r\\nG{ch2}gA".to_string(),
+            recv_template: "G{ch2}gA".to_string(),
         }
     }
 }
@@ -29,12 +29,20 @@ impl KvmConfig {
         if self.device.trim().is_empty() {
             self.enabled = false;
         }
+        if self.send_template.trim().is_empty() {
+            self.send_template = "SW{ch}\\r\\nG{ch2}gA".to_string();
+        }
+        if self.recv_template.trim().is_empty() {
+            self.recv_template = "G{ch2}gA".to_string();
+        }
     }
 
     pub fn to_controller_config(&self) -> crate::kvm::KvmControllerConfig {
         crate::kvm::KvmControllerConfig {
             device: self.device.clone(),
             baud_rate: self.baud_rate,
+            send_template: self.send_template.clone(),
+            recv_template: self.recv_template.clone(),
         }
     }
 }

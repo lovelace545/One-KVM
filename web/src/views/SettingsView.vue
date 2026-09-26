@@ -1231,6 +1231,8 @@ const kvmConfig = ref({
   enabled: false,
   device: '',
   baud_rate: 19200,
+  send_template: 'SW{ch}\\r\\nG{ch2}gA',
+  recv_template: 'G{ch2}gA',
 })
 const kvmSaving = ref(false)
 const kvmSaved = ref(false)
@@ -1879,6 +1881,8 @@ async function loadKvmConfig() {
       enabled: cfg.enabled,
       device: cfg.device || '',
       baud_rate: cfg.baud_rate || 19200,
+      send_template: cfg.send_template || 'SW{ch}\\r\\nG{ch2}gA',
+      recv_template: cfg.recv_template || 'G{ch2}gA',
     }
   } catch {
   }
@@ -1892,6 +1896,8 @@ async function saveKvmConfig() {
       enabled: kvmConfig.value.enabled,
       device: kvmConfig.value.device,
       baud_rate: kvmConfig.value.baud_rate,
+      send_template: kvmConfig.value.send_template,
+      recv_template: kvmConfig.value.recv_template,
     })
     kvmSaved.value = true
     setTimeout(() => (kvmSaved.value = false), 2000)
@@ -4414,6 +4420,19 @@ watch(isWindows, () => {
                         <SelectItem :value="115200">115200</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div class="space-y-2">
+                    <Label for="kvm-send">发送命令模板</Label>
+                    <input id="kvm-send" v-model="kvmConfig.send_template" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" placeholder="SW{ch}\\r\\nG{ch2}gA" />
+                    <p class="text-xs text-muted-foreground">{ch}=通道号 {ch2}=两位补零</p>
+                  </div>
+                  <div class="space-y-2">
+                    <Label for="kvm-recv">接收匹配模板</Label>
+                    <input id="kvm-recv" v-model="kvmConfig.recv_template" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" placeholder="G{ch2}gA" />
+                    <p class="text-xs text-muted-foreground">设备返回的确认消息模式</p>
                   </div>
                 </div>
               </CardContent>

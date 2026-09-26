@@ -171,6 +171,8 @@ export interface KvmConfig {
   enabled: boolean
   device: string
   baud_rate: number
+  send_template: string
+  recv_template: string
 }
 
 export const kvmConfigApi = {
