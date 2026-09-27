@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import HidDriverForm from '@/components/HidDriverForm.vue'
-import { selectionFrom, readPendingHid, writePendingHid } from '@/lib/hidGuide'
+import { selectionFrom } from '@/lib/hidGuide'
 
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -80,7 +80,7 @@ const audioSupported = computed(() => platform.value?.audio.available ?? true)
 const totalSteps = 4
 const EMPTY_SELECT_VALUE = '__one-kvm-empty-select-value__'
 
-const hidSelection = ref(readPendingHid()?.selection ?? selectionFrom())
+const hidSelection = ref(selectionFrom())
 const hidSelectionValid = ref(false)
 
 const ttydEnabled = ref(false)
@@ -320,7 +320,6 @@ function validateStep3(): boolean {
     error.value = t('hidGuide.selectDevice')
     return false
   }
-  writePendingHid({ selection: hidSelection.value, phase: 'selected' })
   return true
 }
 
@@ -348,7 +347,7 @@ function prevStep() {
 async function handleSetup() {
   error.value = ''
 
-  if (!readPendingHid() || loading.value) return
+  if (loading.value || !validateStep3()) return
 
   loading.value = true
   // Reconcile a previous timed-out account request before submitting again.
@@ -386,7 +385,16 @@ async function handleSetup() {
     setupData.video_fps = toConfigFps(videoFps.value)
   }
 
-  setupData.hid_backend = 'none'
+  const hid = hidSelection.value
+  setupData.hid_backend = hid.backend
+  if (hid.backend === 'ch9329') {
+    setupData.hid_ch9329_port = hid.ch9329_port
+    setupData.hid_ch9329_baudrate = hid.ch9329_baudrate
+  } else if (hid.backend === 'otg') {
+    setupData.hid_otg_udc = hid.otg_udc
+  } else if (hid.backend === 'bluetooth') {
+    setupData.hid_bluetooth = { ...hid.bluetooth }
+  }
   setupData.msd_enabled = false
 
   // Encoder backend setting
@@ -604,6 +612,7 @@ const stepIcons = [User, Video, Keyboard, Puzzle]
               :format="videoFormat"
               :resolution="videoResolution"
               :fps="videoFps"
+              resolution-fps-inline
               :refreshing="refreshingInputStatus"
               @update:format="videoFormat = $event"
               @update:resolution="videoResolution = $event"
