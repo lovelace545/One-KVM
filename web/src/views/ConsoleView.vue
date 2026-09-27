@@ -3334,7 +3334,7 @@ onUnmounted(() => {
               <StatusCard
                 v-if="kvmStatusData.available"
                 :title="t('kvm.title')"
-                type="kvm"
+                type="kvmswitch"
                 :status="kvmStatus"
                 :quick-info="kvmQuickInfo"
                 :details="kvmDetails"

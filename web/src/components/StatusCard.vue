@@ -29,7 +29,7 @@ export interface StatusDetail {
 
 const props = withDefaults(defineProps<{
   title: string
-  type: 'device' | 'video' | 'hid' | 'audio' | 'msd'
+  type: 'device' | 'video' | 'hid' | 'audio' | 'msd' | 'kvmswitch'
   status: ConnectionStatus
   quickInfo?: string  // Quick info displayed on trigger (e.g., "1920x1080 30fps")
   subtitle?: string
