@@ -212,7 +212,7 @@ const navGroups = computed(() => [
       { id: 'video', label: t('settings.video'), icon: Monitor },
       { id: 'hid', label: t('settings.hid'), icon: Keyboard },
       { id: 'atx', label: t('settings.atx'), icon: Power },
-      { id: 'kvm', label: t('settings.kvm.title'), icon: Monitor },
+      { id: 'kvm', label: t('settings.kvmSwitch.title'), icon: Monitor },
       { id: 'environment', label: t('settings.environment'), icon: Server },
       { id: 'other', label: t('settings.other'), icon: Wrench },
     ]
@@ -4352,35 +4352,35 @@ watch(isWindows, () => {
           <div v-show="activeSection === 'kvm'" class="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>{{ t('settings.kvm.title') }}</CardTitle>
-                <CardDescription>{{ t('settings.kvm.description') }}</CardDescription>
+                <CardTitle>{{ t('settings.kvmSwitch.title') }}</CardTitle>
+                <CardDescription>{{ t('settings.kvmSwitch.description') }}</CardDescription>
               </CardHeader>
               <CardContent class="space-y-4">
                 <div class="flex items-center justify-between">
                   <div class="space-y-0.5">
-                    <Label>{{ t('settings.kvm.enable') }}</Label>
-                    <p class="text-sm text-muted-foreground">{{ t('settings.kvm.enableDesc') }}</p>
+                    <Label>{{ t('settings.kvmSwitch.enable') }}</Label>
+                    <p class="text-sm text-muted-foreground">{{ t('settings.kvmSwitch.enableDesc') }}</p>
                   </div>
                   <Switch v-model="kvmConfig.enabled" />
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
                   <div class="space-y-2">
-                    <Label for="kvm-device">{{ t('settings.kvm.serialPort') }}</Label>
+                    <Label for="kvm-device">{{ t('settings.kvmSwitch.serialPort') }}</Label>
                     <Select
                       :model-value="kvmConfig.device || EMPTY_SELECT_VALUE"
                       @update:model-value="value => kvmConfig.device = value === EMPTY_SELECT_VALUE ? '' : String(value)"
                     >
-                      <SelectTrigger id="kvm-device" class="w-full"><SelectValue :placeholder="t('settings.kvm.selectSerialPort')" /></SelectTrigger>
+                      <SelectTrigger id="kvm-device" class="w-full"><SelectValue :placeholder="t('settings.kvmSwitch.selectSerialPort')" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem :value="EMPTY_SELECT_VALUE">{{ t('settings.kvm.none') }}</SelectItem>
+                        <SelectItem :value="EMPTY_SELECT_VALUE">{{ t('settings.kvmSwitch.none') }}</SelectItem>
                         <SelectItem v-for="port in atxDevices.serial_ports" :key="port" :value="port">{{ port }}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div class="space-y-2">
-                    <Label for="kvm-baud">{{ t('settings.kvm.baudRate') }}</Label>
+                    <Label for="kvm-baud">{{ t('settings.kvmSwitch.baudRate') }}</Label>
                     <Select :model-value="kvmConfig.baud_rate" @update:model-value="value => kvmConfig.baud_rate = Number(value)">
                       <SelectTrigger id="kvm-baud" class="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>

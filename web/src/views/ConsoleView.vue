@@ -3332,6 +3332,14 @@ onUnmounted(() => {
                 :hover-align="hidHoverAlign"
               />
               <StatusCard
+                v-if="kvmStatusData.available"
+                :title="t('kvm.title')"
+                type="kvm"
+                :status="kvmStatus"
+                :quick-info="kvmQuickInfo"
+                :details="kvmDetails"
+              />
+              <StatusCard
                 v-if="showMsdStatusCard"
                 :title="t('statusCard.msd')"
                 type="msd"
