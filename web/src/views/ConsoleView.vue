@@ -642,9 +642,10 @@ const kvmQuickInfo = computed(() => {
 })
 const kvmDetails = computed<StatusDetail[]>(() => {
   if (!kvmStatusData.value.available) return []
+  const ch = kvmStatusData.value.current_channel
   return [
-    { label: t('statusCard.connection'), value: t('statusCard.connected'), status: 'ok' },
-    { label: t('kvm.currentChannel'), value: `CH${kvmStatusData.value.current_channel}`, status: undefined },
+    { label: t('statusCard.connection'), value: ch > 0 ? t('statusCard.connected') : t('statusCard.disconnected'), status: ch > 0 ? 'ok' : 'warning' },
+    { label: t('kvm.currentChannel'), value: ch > 0 ? `CH${ch}` : '-', status: undefined },
   ]
 })
 

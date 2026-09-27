@@ -328,6 +328,8 @@ export default {
     channel: '通道 {ch}',
     switchedTo: '已切换到通道 {ch}',
     switchFailed: 'KVM 通道切换失败',
+    currentChannel: '当前通道',
+    channelShort: 'CH{ch}',
   },
   setup: {
     welcome: '欢迎使用 One-KVM',
@@ -1120,6 +1122,7 @@ export default {
     off: '关闭',
     defaultDevice: '默认',
     connected: '已连接',
+    connection: '连接状态',
     msdStatus: '状态',
     msdStandby: '空闲',
     msdDriveMode: '虚拟U盘',

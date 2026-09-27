@@ -328,6 +328,8 @@ export default {
     channel: 'Channel {ch}',
     switchedTo: 'Switched to channel {ch}',
     switchFailed: 'KVM channel switch failed',
+    currentChannel: 'Current Channel',
+    channelShort: 'CH{ch}',
   },
   setup: {
     welcome: 'Welcome to One-KVM',
@@ -1121,6 +1123,7 @@ export default {
     off: 'Off',
     defaultDevice: 'Default',
     connected: 'Connected',
+    connection: 'Connection',
     msdStatus: 'Status',
     msdStandby: 'Idle',
     msdDriveMode: 'Virtual USB',
